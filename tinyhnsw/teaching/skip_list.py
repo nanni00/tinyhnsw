@@ -6,11 +6,12 @@ from __future__ import annotations
 
 import random
 
+random.seed(42)
 
 class Node:
     def __init__(self, value: int, level: int) -> None:
         self.value = value
-        self.pointers = [None for _ in range(level + 1)]
+        self.pointers: list[Node | None] = [None for _ in range(level + 1)]
 
     def __repr__(self) -> str:
         return str(self.value)
@@ -30,7 +31,7 @@ class SkipList:
         self.max_level = max_level  # note: max_level is 0-indexed (0 means 1 level, 1 means 2 levls, etc.)
         self.level = 0
         self.p = p
-        self.header = Node(value=-1, level=self.max_level)
+        self.header: Node = Node(value=-1, level=self.max_level)
 
         if lst is None:
             lst = []
@@ -48,12 +49,31 @@ class SkipList:
             level += 1
         return level
 
+    def search(self, value: int) -> Node | None:
+        current = self.header
+        level = self.level
+
+        while level >= 0 and current.pointers[0] is not None:
+            next = current.pointers[level]
+            # move down a level
+            if next is None or next.value > value:
+                level -= 1
+                continue
+            # closest node is current node -- return it
+            if next.value == value:
+                return next
+            # move over one pointer
+            if next.value < value:
+                current = current.pointers[level]
+
+        return None
+
     def insert(self, value: int) -> None:
-        # list of all nodes that might need to update their forward pointer
-        update = [self.header for _ in range(self.max_level + 1)]
         # step 1 is to traverse the skip-list and make a list of all the
         # nodes that need to be updated
         current = self.header
+        # list of all nodes that might need to update their forward pointer
+        update = [self.header for _ in range(self.max_level + 1)]
 
         for level in range(self.level, -1, -1):
             while (
@@ -77,25 +97,6 @@ class SkipList:
                 node = update[i]
                 new_node.pointers[i] = node.pointers[i]
                 node.pointers[i] = new_node
-
-    def find(self, value: int) -> Node | None:
-        current = self.header
-        level = self.level
-
-        while level >= 0 and current.pointers[0] is not None:
-            next = current.pointers[level]
-            # move down a level
-            if next is None or next.value > value:
-                level -= 1
-                continue
-            # closest node is current node -- return it
-            if next.value == value:
-                return next
-            # move over one pointer
-            if next.value < value:
-                current = current.pointers[level]
-
-        return None
 
     def delete(self, value: int) -> None:
         update = [None for _ in range(self.max_level + 1)]
