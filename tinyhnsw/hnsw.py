@@ -128,8 +128,11 @@ class HNSWLayer:
     def distance_to_node(self, q: numpy.ndarray, e: int) -> float:
         v = self.index.vectors[e]
         d = self.index.distance(q, v)[0]
-        return d
-
+        try:
+            return float(d)
+        except TypeError:
+            return d[0]
+        
     def search(
         self, q: numpy.ndarray, ep: int, ef: int
     ) -> tuple[list[float], list[int]]:

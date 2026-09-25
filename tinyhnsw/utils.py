@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import numpy
 import shutil
@@ -7,9 +8,12 @@ import urllib.request as request
 from contextlib import closing
 
 
-DATA_PATH = os.path.join("data", "siftsmall", "siftsmall_base.fvecs")
-QUERY_PATH = os.path.join("data", "siftsmall", "siftsmall_query.fvecs")
-LABEL_PATH = os.path.join("data", "siftsmall", "siftsmall_groundtruth.ivecs")
+PROJECT_DATA_DIR = Path.cwd().parent / "data"
+assert PROJECT_DATA_DIR.exists()
+DATASET = "siftsmall"
+DATA_PATH = PROJECT_DATA_DIR / "siftsmall" / "siftsmall_base.fvecs"
+QUERY_PATH = PROJECT_DATA_DIR / "siftsmall" / "siftsmall_query.fvecs"
+LABEL_PATH = PROJECT_DATA_DIR / "siftsmall" / "siftsmall_groundtruth.ivecs"
 
 
 def download_sift() -> None:
@@ -17,7 +21,7 @@ def download_sift() -> None:
     Download the ANN_SIFT10K dataset, with code modified from:
         https://www.pinecone.io/learn/series/faiss/vector-indexes/
     """
-    output = os.path.join("data", "siftsmall.tar.gz")
+    output = PROJECT_DATA_DIR / "siftsmall.tar.gz"
 
     with closing(
         request.urlopen("ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz")
@@ -26,10 +30,27 @@ def download_sift() -> None:
             shutil.copyfileobj(r, f)
 
     tar = tarfile.open(output, "r:gz")
-    tar.extractall("data")
+    tar.extractall(PROJECT_DATA_DIR)
+
+def download_sift_1M() -> None:
+    """
+    Download the ANN_SIFT1M dataset, with code modified from:
+        https://www.pinecone.io/learn/series/faiss/vector-indexes/
+    """
+    output = PROJECT_DATA_DIR / "sift.tar.gz"
+
+    with closing(
+        request.urlopen("ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz")
+    ) as r:
+        with open(output, "wb") as f:
+            shutil.copyfileobj(r, f)
+
+    tar = tarfile.open(output, "r:gz")
+    tar.extractall(PROJECT_DATA_DIR)
 
 
-def read_vecs(path: str, ivecs: bool = False) -> numpy.ndarray:
+
+def read_vecs(path: Path, ivecs: bool = False) -> numpy.ndarray:
     a = numpy.fromfile(path, dtype="int32")
     d = a[0]
     matrix = a.reshape(-1, d + 1)[:, 1:].copy()
@@ -58,6 +79,21 @@ def load_sift() -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
         read_vecs(QUERY_PATH),
         read_vecs(LABEL_PATH, ivecs=True)[:, 0],
     )
+
+def load_sift_1M() -> tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+    DATA_PATH = PROJECT_DATA_DIR / "sift" / "sift_base.fvecs"
+    QUERY_PATH = PROJECT_DATA_DIR / "sift" / "sift_query.fvecs"
+    LABEL_PATH = PROJECT_DATA_DIR / "sift" / "sift_groundtruth.ivecs"
+
+    if not DATA_PATH.exists():
+        download_sift_1M()
+
+    return (
+        read_vecs(DATA_PATH),
+        read_vecs(QUERY_PATH),
+        read_vecs(LABEL_PATH, ivecs=True)[:, 0],
+    )
+
 
 
 if __name__ == '__main__':
